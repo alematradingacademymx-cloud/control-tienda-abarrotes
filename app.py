@@ -10,7 +10,7 @@ from config import MENU_POR_ROL
 from sheets_connector import leer_hoja
 from auth import (
     pantalla_login, esta_autenticado, cerrar_sesion, rol_actual, nombre_actual,
-    crear_usuario,
+    crear_usuario, restaurar_sesion,
 )
 from modules import (
     inicio, inventario, ventas, corte_caja, proveedores,
@@ -57,6 +57,8 @@ def main():
     if usuarios_df.empty:
         _bootstrap_primer_admin()
         return
+
+    restaurar_sesion()
 
     if not esta_autenticado():
         pantalla_login()
