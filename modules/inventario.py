@@ -74,6 +74,11 @@ def render():
                 stock_actual = st.number_input("Stock inicial", min_value=0.0, step=1.0)
                 stock_minimo = st.number_input("Stock mínimo (alerta)", min_value=0.0, step=1.0)
 
+            codigo_barras = st.text_input(
+                "Código de barras (opcional)",
+                placeholder="Coloca el cursor aquí y escanea el producto, o escríbelo a mano",
+            )
+
             enviado = st.form_submit_button("Guardar producto")
             if enviado:
                 if not nombre or not seccion:
@@ -91,6 +96,7 @@ def render():
                         "stock_minimo": stock_minimo,
                         "proveedor": proveedor,
                         "fecha_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "codigo_barras": codigo_barras.strip(),
                     })
                     st.success(f"Producto '{nombre}' agregado con ID {id_producto}.")
                     st.rerun()
@@ -113,6 +119,12 @@ def render():
                     ajuste_stock = st.number_input("Ajustar stock (+ entrada / - salida)", value=0.0, step=1.0)
                     nuevo_minimo = st.number_input("Stock mínimo", value=float(fila["stock_minimo"] or 0), min_value=0.0, step=1.0)
 
+                nuevo_codigo_barras = st.text_input(
+                    "Código de barras (opcional)",
+                    value=str(fila.get("codigo_barras", "") or ""),
+                    placeholder="Coloca el cursor aquí y escanea el producto, o escríbelo a mano",
+                )
+
                 guardar = st.form_submit_button("Guardar cambios")
                 eliminar = False
                 if rol_actual() == "admin":
@@ -126,6 +138,7 @@ def render():
                         "stock_actual": nuevo_stock,
                         "stock_minimo": nuevo_minimo,
                         "fecha_actualizacion": datetime.now().strftime("%Y-%m-%d %H:%M"),
+                        "codigo_barras": nuevo_codigo_barras.strip(),
                     })
                     st.success("Producto actualizado.")
                     st.rerun()
