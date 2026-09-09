@@ -77,8 +77,20 @@ def cantidad_en_carrito(clave: str, id_producto) -> float:
 
 
 def agregar_al_carrito(clave: str, fila_producto: dict, seccion: str, cantidad: float, precio_unitario: float):
+    """Agrega `cantidad` unidades del producto al carrito. Si ese mismo
+    producto (mismo id_producto y mismo precio_unitario) ya está en el
+    carrito, simplemente le suma la cantidad a esa línea en vez de crear una
+    línea nueva — así, si escaneas el mismo producto varias veces, se ve como
+    una sola línea con el total acumulado (ej. '3 x Cigarro suelto') en vez
+    de tres líneas repetidas."""
     costo_unitario = float(pd.to_numeric(fila_producto.get("costo_unitario", 0), errors="coerce") or 0)
-    obtener_carrito(clave).append({
+    carrito = obtener_carrito(clave)
+    for item in carrito:
+        if item["id_producto"] == fila_producto["id_producto"] and item["precio_unitario"] == precio_unitario:
+            item["cantidad"] += cantidad
+            item["subtotal"] = item["precio_unitario"] * item["cantidad"]
+            return
+    carrito.append({
         "id_producto": fila_producto["id_producto"],
         "nombre_producto": fila_producto["nombre_producto"],
         "seccion": seccion,
@@ -93,6 +105,21 @@ def quitar_del_carrito(clave: str, indice: int):
     carrito = obtener_carrito(clave)
     if 0 <= indice < len(carrito):
         carrito.pop(indice)
+
+
+def restar_uno_del_carrito(clave: str, indice: int):
+    """Resta 1 unidad a la línea del carrito en ese índice (útil para
+    corregir un escaneo de más). Si llega a 0 o menos, quita la línea por
+    completo."""
+    carrito = obtener_carrito(clave)
+    if not (0 <= indice < len(carrito)):
+        return
+    item = carrito[indice]
+    item["cantidad"] -= 1
+    if item["cantidad"] <= 0:
+        carrito.pop(indice)
+    else:
+        item["subtotal"] = item["precio_unitario"] * item["cantidad"]
 
 
 def vaciar_carrito(clave: str):
@@ -159,8 +186,18 @@ def registrar_venta_carrito(clave: str, metodo_pago: str, turno: str = "") -> st
 
 def render_agregar_por_escaner(clave: str, inventario: pd.DataFrame, key_prefix: str):
     """Widget de escaneo de código de barras para agregar productos al
-    carrito `clave`."""
-    st.caption("Coloca el cursor en el siguiente campo y escanea el código de barras del producto.")
+    carrito `clave`.
+
+    Para productos que se venden por pieza, cada escaneo agrega 1 unidad de
+    inmediato — sin pasos manuales — así que para vender, por ejemplo, 3
+    cigarros sueltos basta con pasar el escáner 3 veces seguidas y el
+    carrito acumula la cantidad solo. Para productos que se venden por peso
+    (kilo, medio kilo, etc.) sí se pide capturar la cantidad a mano, porque
+    ahí no tiene sentido "contar escaneos" — se necesita pesar el producto."""
+    st.caption(
+        "Coloca el cursor en el siguiente campo y escanea el código de barras del producto. "
+        "Para productos por pieza, puedes escanear varias veces seguidas: cada escaneo suma 1 al carrito."
+    )
 
     if "codigo_barras" not in inventario.columns:
         st.warning("Todavía no hay productos con código de barras registrado. Agrégalo desde el módulo de Inventario.")
@@ -182,7 +219,26 @@ def render_agregar_por_escaner(clave: str, inventario: pd.DataFrame, key_prefix:
                 st.error(f"No se encontró ningún producto con el código '{codigo}'.")
                 st.session_state.pop(estado_key, None)
             else:
-                st.session_state[estado_key] = coincidencias.iloc[0].to_dict()
+                producto_escaneado = coincidencias.iloc[0].to_dict()
+                unidad = str(producto_escaneado.get("unidad", "") or "").strip()
+
+                if unidad in ("", "Pieza"):
+                    # Se vende por pieza: agregar 1 unidad de inmediato, sin
+                    # confirmación manual, para poder escanear varias veces seguidas.
+                    stock_disp = float(pd.to_numeric(producto_escaneado.get("stock_actual", 0), errors="coerce") or 0)
+                    stock_disp -= cantidad_en_carrito(clave, producto_escaneado["id_producto"])
+                    precio_unitario = float(pd.to_numeric(producto_escaneado.get("precio_venta", 0), errors="coerce") or 0)
+
+                    if stock_disp < 1:
+                        st.error(f"'{producto_escaneado['nombre_producto']}' ya no tiene stock disponible (o ya lo agregaste todo al carrito).")
+                    else:
+                        agregar_al_carrito(clave, producto_escaneado, producto_escaneado["seccion"], 1.0, precio_unitario)
+                        st.toast(f"+1 {producto_escaneado['nombre_producto']} agregado al carrito.", icon="🛒")
+                    st.session_state.pop(estado_key, None)
+                    st.rerun()
+                else:
+                    # Se vende por peso: se necesita capturar la cantidad a mano.
+                    st.session_state[estado_key] = producto_escaneado
 
     producto = st.session_state.get(estado_key)
     if not producto:
@@ -196,7 +252,11 @@ def render_agregar_por_escaner(clave: str, inventario: pd.DataFrame, key_prefix:
         st.error(f"'{producto['nombre_producto']}' ya no tiene stock disponible (o ya lo agregaste todo al carrito).")
         return
 
-    st.success(f"Producto encontrado: **{producto['nombre_producto']}** — Sección: {producto['seccion']} — Stock disponible: {stock_disp:g}")
+    unidad_producto = str(producto.get("unidad", "") or "Pieza").strip() or "Pieza"
+    st.success(
+        f"Producto encontrado: **{producto['nombre_producto']}** — Sección: {producto['seccion']} — "
+        f"Se vende por: {unidad_producto} — Stock disponible: {stock_disp:g}"
+    )
 
     # Fuera de un form: así el subtotal se recalcula al instante mientras
     # cambias la cantidad, en vez de quedarse fijo hasta que envíes el form.
@@ -288,9 +348,12 @@ def render_lista_carrito(clave: str, key_prefix: str) -> float:
         return 0.0
 
     for i, item in enumerate(carrito):
-        col_desc, col_quitar = st.columns([6, 1])
+        col_desc, col_menos, col_quitar = st.columns([6, 1, 1])
         col_desc.write(f"**{item['cantidad']:g}** x {item['nombre_producto']} — ${item['subtotal']:,.2f}")
-        if col_quitar.button("❌", key=f"{key_prefix}_quitar_{i}", help="Quitar del carrito"):
+        if col_menos.button("➖", key=f"{key_prefix}_menos_{i}", help="Quitar 1 unidad (por si escaneaste de más)"):
+            restar_uno_del_carrito(clave, i)
+            st.rerun()
+        if col_quitar.button("❌", key=f"{key_prefix}_quitar_{i}", help="Quitar todo del carrito"):
             quitar_del_carrito(clave, i)
             st.rerun()
 
