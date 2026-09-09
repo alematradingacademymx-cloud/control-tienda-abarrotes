@@ -65,6 +65,74 @@ CSS_OSCURO = """
 </style>
 """
 
+# Streamlit, si no se le indica lo contrario, a veces sigue el modo oscuro del
+# navegador/sistema operativo — por eso "Claro" también necesita su propio
+# CSS explícito (fondo blanco, letras oscuras/azules) en vez de solo "no
+# aplicar nada" y confiar en que el tema por defecto sea claro.
+CSS_CLARO = """
+<style>
+    [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stBottomBlockContainer"] {
+        background-color: #ffffff;
+        color: #0e1117;
+    }
+    [data-testid="stSidebar"] {
+        background-color: #f4f6fa;
+    }
+    [data-testid="stSidebar"] * {
+        color: #0e1117;
+    }
+    h1, h2, h3, h4, h5, h6, p, span, label, li,
+    .stMarkdown, .stCaption, [data-testid="stMetricLabel"],
+    [data-testid="stMetricValue"] {
+        color: #0e1117 !important;
+    }
+    .stTextInput input, .stNumberInput input, .stTextArea textarea,
+    .stDateInput input, .stSelectbox div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] * {
+        background-color: #ffffff !important;
+        color: #0e1117 !important;
+        border-color: #c7cdd6 !important;
+    }
+    .stButton button, .stFormSubmitButton button, .stDownloadButton button {
+        background-color: #ffffff;
+        color: #0b5fff;
+        border: 1px solid #c7cdd6;
+    }
+    .stButton button:hover, .stFormSubmitButton button:hover {
+        border-color: #0b5fff;
+        color: #084bcc;
+    }
+    [data-testid="stMetric"] {
+        background-color: #f4f6fa;
+        border: 1px solid #e3e7ee;
+        border-radius: 8px;
+        padding: 10px;
+    }
+    [data-testid="stMetric"] [data-testid="stMetricValue"] {
+        color: #0b5fff !important;
+    }
+    [data-testid="stDataFrame"], [data-testid="stTable"] {
+        background-color: #ffffff;
+        color: #0e1117;
+    }
+    button[data-baseweb="tab"] {
+        color: #33415c !important;
+    }
+    [data-testid="stExpander"] {
+        background-color: #f4f6fa;
+        border: 1px solid #e3e7ee;
+    }
+    [data-testid="stForm"] {
+        background-color: #f9fafc;
+        border: 1px solid #e3e7ee;
+        border-radius: 8px;
+    }
+    hr {
+        border-color: #e3e7ee !important;
+    }
+</style>
+"""
+
 
 def _inicializar_tema():
     if "tema" not in st.session_state:
@@ -97,3 +165,5 @@ def selector_tema():
 
     if st.session_state["tema"] == "Oscuro":
         st.markdown(CSS_OSCURO, unsafe_allow_html=True)
+    else:
+        st.markdown(CSS_CLARO, unsafe_allow_html=True)

@@ -101,7 +101,7 @@ def _render_venta_por_escaner(inventario: pd.DataFrame):
             else:
                 total = _registrar_venta(producto, producto["seccion"], cantidad, precio_unitario, metodo_pago)
                 st.session_state.pop("producto_escaneado", None)
-                st.success(f"Venta registrada: {cantidad:g} x {producto['nombre_producto']} = ${total:,.2f} ({metodo_pago})")
+                st.toast(f"Venta registrada: {cantidad:g} x {producto['nombre_producto']} = ${total:,.2f} ({metodo_pago})", icon="✅")
                 st.rerun()
 
     if st.button("Cancelar / escanear otro producto"):
@@ -152,7 +152,7 @@ def _render_venta_manual(inventario: pd.DataFrame):
                 st.error("No hay suficiente stock para esa cantidad.")
             else:
                 total = _registrar_venta(fila_producto, seccion_sel, cantidad, precio_unitario, metodo_pago)
-                st.success(f"Venta registrada: {cantidad:g} x {nombre_producto} = ${total:,.2f} ({metodo_pago})")
+                st.toast(f"Venta registrada: {cantidad:g} x {nombre_producto} = ${total:,.2f} ({metodo_pago})", icon="✅")
                 st.rerun()
 
 
