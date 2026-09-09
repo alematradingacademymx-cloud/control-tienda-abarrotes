@@ -19,7 +19,7 @@ HOJAS = {
     "Inventario": [
         "id_producto", "nombre_producto", "seccion", "unidad",
         "costo_unitario", "precio_venta", "stock_actual", "stock_minimo",
-        "proveedor", "fecha_actualizacion",
+        "proveedor", "fecha_actualizacion", "codigo_barras",
     ],
     "Ventas": [
         "id_venta", "fecha", "hora", "usuario", "seccion", "id_producto",
