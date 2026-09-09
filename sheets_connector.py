@@ -65,15 +65,25 @@ def _get_spreadsheet():
 
 
 def get_or_create_worksheet(nombre_hoja: str):
-    """Devuelve la pestaña; si no existe, la crea con los encabezados de config.py."""
+    """Devuelve la pestaña; si no existe, la crea con los encabezados de config.py.
+    Si ya existe pero le faltan columnas nuevas definidas en config.py (por una
+    actualización de la app), las agrega automáticamente al final del encabezado."""
     sh = _get_spreadsheet()
     try:
-        return sh.worksheet(nombre_hoja)
+        ws = sh.worksheet(nombre_hoja)
     except gspread.WorksheetNotFound:
         columnas = HOJAS[nombre_hoja]
         ws = sh.add_worksheet(title=nombre_hoja, rows=1000, cols=len(columnas) + 2)
         ws.append_row(columnas)
         return ws
+
+    columnas_esperadas = HOJAS[nombre_hoja]
+    encabezado_actual = ws.row_values(1)
+    columnas_faltantes = [c for c in columnas_esperadas if c not in encabezado_actual]
+    if columnas_faltantes:
+        nuevo_encabezado = encabezado_actual + columnas_faltantes
+        ws.update("A1", [nuevo_encabezado])
+    return ws
 
 
 def _limpiar_cache_datos():
