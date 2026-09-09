@@ -106,6 +106,18 @@ ETIQUETAS_UNIDAD = {
 
 PERIODICIDAD_NOMINA = ["Semanal", "Quincenal", "Mensual"]
 
+# Turnos de trabajo para el corte de caja. El horario es la hora de inicio y
+# fin (formato 24h) de cada turno, usado para clasificar automáticamente cada
+# venta según la hora en que se registró. El turno "Nocturno" cruza la
+# medianoche (empieza un día y termina el siguiente).
+TURNOS = ["Matutino", "Vespertino", "Nocturno"]
+
+HORARIO_TURNOS = {
+    "Matutino": ("06:00", "14:00"),
+    "Vespertino": ("14:00", "20:00"),
+    "Nocturno": ("20:00", "06:00"),
+}
+
 ESTATUS_PAGO = ["Pendiente", "Parcial", "Pagado"]
 
 ESTATUS_ENVIO = ["Pendiente", "En camino", "Entregado", "Cancelado"]
