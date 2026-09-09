@@ -66,6 +66,44 @@ SECCIONES_DEFAULT = [
     "Higiene personal", "Panadería", "Frutas y verduras", "Congelados", "Otros",
 ]
 
+# Unidades de venta para productos que se venden por peso/fracción (ej. queso,
+# jamón, granos a granel) además de los que se venden por pieza completa.
+UNIDADES_VENTA = ["Pieza", "Kilo", "Medio kilo (500g)", "Cuarto de kilo (250g)"]
+
+# Etiquetas de los campos de precio/costo/stock según la unidad elegida, para
+# que el formulario de Inventario sea más claro (ej. "Precio por kilo" en vez
+# de un genérico "Precio de venta" que no dice si es por pieza o por peso).
+ETIQUETAS_UNIDAD = {
+    "Pieza": {
+        "precio": "Precio de venta (por pieza)",
+        "costo": "Costo unitario (por pieza)",
+        "stock": "Stock inicial (piezas)",
+        "stock_min": "Stock mínimo (piezas)",
+        "ajuste": "Ajustar stock (+ entrada / - salida, piezas)",
+    },
+    "Kilo": {
+        "precio": "Precio por kilo",
+        "costo": "Costo por kilo",
+        "stock": "Stock inicial (kilos)",
+        "stock_min": "Stock mínimo (kilos)",
+        "ajuste": "Ajustar stock (+ entrada / - salida, kilos)",
+    },
+    "Medio kilo (500g)": {
+        "precio": "Precio por medio kilo",
+        "costo": "Costo por medio kilo",
+        "stock": "Stock inicial (medios kilos)",
+        "stock_min": "Stock mínimo (medios kilos)",
+        "ajuste": "Ajustar stock (+ entrada / - salida, medios kilos)",
+    },
+    "Cuarto de kilo (250g)": {
+        "precio": "Precio por cuarto de kilo",
+        "costo": "Costo por cuarto de kilo",
+        "stock": "Stock inicial (cuartos de kilo)",
+        "stock_min": "Stock mínimo (cuartos de kilo)",
+        "ajuste": "Ajustar stock (+ entrada / - salida, cuartos de kilo)",
+    },
+}
+
 PERIODICIDAD_NOMINA = ["Semanal", "Quincenal", "Mensual"]
 
 ESTATUS_PAGO = ["Pendiente", "Parcial", "Pagado"]
