@@ -151,27 +151,28 @@ def render_agregar_por_escaner(clave: str, inventario: pd.DataFrame, key_prefix:
 
     st.success(f"Producto encontrado: **{producto['nombre_producto']}** — Sección: {producto['seccion']} — Stock disponible: {stock_disp:g}")
 
-    with st.form(f"{key_prefix}_form_agregar_carrito_escaner", clear_on_submit=True):
-        colc1, colc2, colc3 = st.columns(3)
-        with colc1:
-            cantidad = st.number_input("Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=1.0)
-        with colc2:
-            st.metric("Precio unitario", f"${precio_unitario:,.2f}")
-        with colc3:
-            st.metric("Subtotal", f"${precio_unitario * cantidad:,.2f}")
+    # Fuera de un form: así el subtotal se recalcula al instante mientras
+    # cambias la cantidad, en vez de quedarse fijo hasta que envíes el form.
+    cantidad_key = f"{key_prefix}_cantidad_escaner"
+    colc1, colc2, colc3 = st.columns(3)
+    with colc1:
+        cantidad = st.number_input("Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=1.0, key=cantidad_key)
+    with colc2:
+        st.metric("Precio unitario", f"${precio_unitario:,.2f}")
+    with colc3:
+        st.metric("Subtotal", f"${precio_unitario * cantidad:,.2f}")
 
-        agregar = st.form_submit_button("➕ Agregar al carrito")
-
-        if agregar:
-            if cantidad <= 0:
-                st.error("La cantidad debe ser mayor a cero.")
-            elif cantidad > stock_disp:
-                st.error("No hay suficiente stock para esa cantidad.")
-            else:
-                agregar_al_carrito(clave, producto, producto["seccion"], cantidad, precio_unitario)
-                st.session_state.pop(estado_key, None)
-                st.toast(f"{cantidad:g} x {producto['nombre_producto']} agregado al carrito.", icon="🛒")
-                st.rerun()
+    if st.button("➕ Agregar al carrito", key=f"{key_prefix}_btn_agregar_escaner"):
+        if cantidad <= 0:
+            st.error("La cantidad debe ser mayor a cero.")
+        elif cantidad > stock_disp:
+            st.error("No hay suficiente stock para esa cantidad.")
+        else:
+            agregar_al_carrito(clave, producto, producto["seccion"], cantidad, precio_unitario)
+            st.session_state.pop(estado_key, None)
+            st.session_state.pop(cantidad_key, None)
+            st.toast(f"{cantidad:g} x {producto['nombre_producto']} agregado al carrito.", icon="🛒")
+            st.rerun()
 
     if st.button("Cancelar / escanear otro producto", key=f"{key_prefix}_cancelar_escaneo"):
         st.session_state.pop(estado_key, None)
@@ -208,26 +209,27 @@ def render_agregar_manual(clave: str, inventario: pd.DataFrame, key_prefix: str)
         st.warning(f"Ya agregaste al carrito todo el stock disponible de '{nombre_producto}'.")
         return
 
-    with st.form(f"{key_prefix}_form_agregar_carrito_manual", clear_on_submit=True):
-        colc1, colc2, colc3 = st.columns(3)
-        with colc1:
-            cantidad = st.number_input("Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=1.0)
-        with colc2:
-            st.metric("Precio unitario", f"${precio_unitario:,.2f}")
-        with colc3:
-            st.metric("Subtotal", f"${precio_unitario * cantidad:,.2f}")
+    # Fuera de un form: así el subtotal se recalcula al instante mientras
+    # cambias la cantidad, en vez de quedarse fijo hasta que envíes el form.
+    cantidad_key = f"{key_prefix}_cantidad_manual"
+    colc1, colc2, colc3 = st.columns(3)
+    with colc1:
+        cantidad = st.number_input("Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=1.0, key=cantidad_key)
+    with colc2:
+        st.metric("Precio unitario", f"${precio_unitario:,.2f}")
+    with colc3:
+        st.metric("Subtotal", f"${precio_unitario * cantidad:,.2f}")
 
-        agregar = st.form_submit_button("➕ Agregar al carrito")
-
-        if agregar:
-            if cantidad <= 0:
-                st.error("La cantidad debe ser mayor a cero.")
-            elif cantidad > stock_disp:
-                st.error("No hay suficiente stock para esa cantidad.")
-            else:
-                agregar_al_carrito(clave, fila_producto, seccion_sel, cantidad, precio_unitario)
-                st.toast(f"{cantidad:g} x {nombre_producto} agregado al carrito.", icon="🛒")
-                st.rerun()
+    if st.button("➕ Agregar al carrito", key=f"{key_prefix}_btn_agregar_manual"):
+        if cantidad <= 0:
+            st.error("La cantidad debe ser mayor a cero.")
+        elif cantidad > stock_disp:
+            st.error("No hay suficiente stock para esa cantidad.")
+        else:
+            agregar_al_carrito(clave, fila_producto, seccion_sel, cantidad, precio_unitario)
+            st.session_state.pop(cantidad_key, None)
+            st.toast(f"{cantidad:g} x {nombre_producto} agregado al carrito.", icon="🛒")
+            st.rerun()
 
 
 def render_lista_carrito(clave: str, key_prefix: str) -> float:
