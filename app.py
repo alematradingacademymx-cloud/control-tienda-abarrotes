@@ -14,10 +14,11 @@ from auth import (
 )
 from modules import (
     inicio, inventario, ventas, corte_caja, proveedores,
-    pagos_proveedores, nomina, mensajeria, usuarios,
+    pagos_proveedores, nomina, mensajeria, usuarios, theme,
 )
 
 st.set_page_config(page_title="Tienda de Abarrotes — Administración", page_icon="🏪", layout="wide")
+theme.selector_tema()
 
 
 def _bootstrap_primer_admin():
