@@ -15,8 +15,55 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+from config import TURNOS, HORARIO_TURNOS
 from sheets_connector import leer_hoja, agregar_fila, actualizar_fila_por_id, siguiente_id, timestamp_hoy
 from auth import usuario_actual
+
+
+def turno_por_hora(hora_str: str) -> str:
+    """Clasifica una hora ('HH:MM:SS' o 'HH:MM') dentro de uno de los TURNOS,
+    según los rangos definidos en HORARIO_TURNOS. El turno nocturno cruza la
+    medianoche (ej. 20:00 a 06:00)."""
+    if not hora_str or not isinstance(hora_str, str):
+        return TURNOS[-1]
+    hora = hora_str[:5]
+    for turno, (inicio, fin) in HORARIO_TURNOS.items():
+        if inicio < fin:
+            if inicio <= hora < fin:
+                return turno
+        else:
+            # Turno que cruza la medianoche (ej. Nocturno: 20:00 - 06:00)
+            if hora >= inicio or hora < fin:
+                return turno
+    return TURNOS[-1]
+
+
+def turno_sugerido_ahora() -> str:
+    """Turno que le correspondería a la hora actual del sistema."""
+    return turno_por_hora(datetime.now().strftime("%H:%M:%S"))
+
+
+def render_selector_turno(key_prefix: str) -> str:
+    """Muestra un selector de turno (Matutino/Vespertino/Nocturno) ya
+    sugerido automáticamente según la hora actual, pero que se puede cambiar
+    a mano si el horario real no coincide (ej. alguien se queda más tiempo).
+    El valor elegido se guarda en session_state y se usa al registrar la
+    venta. Devuelve el turno elegido."""
+    turno_key = f"{key_prefix}_turno_actual"
+    if turno_key not in st.session_state:
+        st.session_state[turno_key] = turno_sugerido_ahora()
+
+    valor_guardado = st.session_state[turno_key]
+    indice = TURNOS.index(valor_guardado) if valor_guardado in TURNOS else 0
+
+    turno = st.selectbox(
+        "🕐 Turno de esta venta",
+        TURNOS,
+        index=indice,
+        key=turno_key,
+        help="Se sugiere solo según la hora actual, pero puedes cambiarlo si tu turno real es otro.",
+    )
+    return turno
 
 
 def obtener_carrito(clave: str) -> list:

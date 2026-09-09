@@ -65,7 +65,8 @@ def _render_confirmacion_envio(total_productos: float):
         elif metodo_pago == "Efectivo" and total_a_cobrar > 0 and recibido < total_a_cobrar:
             st.error("El monto recibido debe cubrir el total antes de confirmar.")
         else:
-            id_venta = carrito_utils.registrar_venta_carrito(CLAVE_CARRITO, metodo_pago, turno="Mensajería")
+            turno_venta = st.session_state.get(f"{PREFIJO}_turno_actual", "")
+            id_venta = carrito_utils.registrar_venta_carrito(CLAVE_CARRITO, metodo_pago, turno=turno_venta)
 
             fecha, _ = timestamp_hoy()
             id_envio = siguiente_id("Mensajeria", "id_envio", prefijo="M")
@@ -113,6 +114,9 @@ def render():
     tab_nuevo, tab_ver = st.tabs(["Registrar envío", "Ver / actualizar envíos"])
 
     with tab_nuevo:
+        carrito_utils.render_selector_turno(PREFIJO)
+        st.divider()
+
         inventario = leer_hoja("Inventario")
         if not inventario.empty:
             inventario["stock_actual_num"] = pd.to_numeric(inventario["stock_actual"], errors="coerce").fillna(0)

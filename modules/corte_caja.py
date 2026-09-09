@@ -15,24 +15,7 @@ import streamlit as st
 from config import METODOS_PAGO, TURNOS, HORARIO_TURNOS
 from sheets_connector import leer_hoja, agregar_fila, siguiente_id
 from auth import usuario_actual
-
-
-def _turno_por_hora(hora_str: str) -> str:
-    """Clasifica una hora ('HH:MM:SS' o 'HH:MM') dentro de uno de los TURNOS,
-    según los rangos definidos en HORARIO_TURNOS. El turno nocturno cruza la
-    medianoche (ej. 20:00 a 06:00)."""
-    if not hora_str or not isinstance(hora_str, str):
-        return TURNOS[-1]
-    hora = hora_str[:5]
-    for turno, (inicio, fin) in HORARIO_TURNOS.items():
-        if inicio < fin:
-            if inicio <= hora < fin:
-                return turno
-        else:
-            # Turno que cruza la medianoche (ej. Nocturno: 20:00 - 06:00)
-            if hora >= inicio or hora < fin:
-                return turno
-    return TURNOS[-1]
+from modules.carrito_utils import turno_por_hora as _turno_por_hora
 
 
 def _calcular_totales(ventas_subset: pd.DataFrame):

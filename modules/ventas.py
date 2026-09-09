@@ -50,7 +50,8 @@ def _render_confirmacion_venta(total: float):
         if metodo_pago == "Efectivo" and recibido < total:
             st.error("El monto recibido debe cubrir el total antes de confirmar.")
         else:
-            id_venta = carrito_utils.registrar_venta_carrito(CLAVE_CARRITO, metodo_pago)
+            turno_venta = st.session_state.get(f"{PREFIJO}_turno_actual", "")
+            id_venta = carrito_utils.registrar_venta_carrito(CLAVE_CARRITO, metodo_pago, turno=turno_venta)
             st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = False
             st.session_state.pop(f"{PREFIJO}_recibido_efectivo", None)
             mensaje = f"Venta {id_venta} registrada por ${total:,.2f} ({metodo_pago})."
@@ -91,6 +92,9 @@ def render():
 
     inventario["stock_actual_num"] = pd.to_numeric(inventario["stock_actual"], errors="coerce").fillna(0)
 
+    carrito_utils.render_selector_turno(PREFIJO)
+
+    st.divider()
     tab_escaner, tab_manual = st.tabs(["📷 Escanear código de barras", "🔍 Buscar manualmente"])
     with tab_escaner:
         carrito_utils.render_agregar_por_escaner(CLAVE_CARRITO, inventario, PREFIJO)
