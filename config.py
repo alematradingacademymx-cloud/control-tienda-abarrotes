@@ -53,7 +53,7 @@ HOJAS = {
     "Mensajeria": [
         "id_envio", "fecha", "cliente_pedido", "mensajero", "direccion_zona",
         "costo_envio", "metodo_pago_envio", "quien_paga", "estatus",
-        "usuario_registro",
+        "usuario_registro", "id_venta", "monto_productos",
     ],
 }
 
