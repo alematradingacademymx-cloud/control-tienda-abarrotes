@@ -17,6 +17,7 @@ def render():
 
     ventas = leer_hoja("Ventas")
     ventas["total_num"] = pd.to_numeric(ventas["total"], errors="coerce").fillna(0)
+    ventas["ganancia_num"] = pd.to_numeric(ventas["ganancia"], errors="coerce").fillna(0)
 
     fecha_corte = st.date_input("Fecha a cortar", value=date.today())
     fecha_str = fecha_corte.strftime("%Y-%m-%d")
@@ -28,15 +29,18 @@ def render():
         st.info(f"No hay ventas registradas para el {fecha_str}.")
         totales = {m: 0.0 for m in METODOS_PAGO}
         total_ventas = 0.0
+        ganancia_dia = 0.0
     else:
         totales = ventas_dia.groupby("metodo_pago")["total_num"].sum().reindex(METODOS_PAGO, fill_value=0).to_dict()
         total_ventas = sum(totales.values())
+        ganancia_dia = ventas_dia["ganancia_num"].sum()
 
     st.subheader("Totales calculados por el sistema")
-    cols = st.columns(len(METODOS_PAGO) + 1)
+    cols = st.columns(len(METODOS_PAGO) + 2)
     for col, metodo in zip(cols, METODOS_PAGO):
         col.metric(metodo, f"${totales[metodo]:,.2f}")
-    cols[-1].metric("Total ventas", f"${total_ventas:,.2f}")
+    cols[-2].metric("Total ventas", f"${total_ventas:,.2f}")
+    cols[-1].metric("Ganancia estimada", f"${ganancia_dia:,.2f}")
 
     st.divider()
     st.subheader("Conteo físico y cierre")
@@ -76,7 +80,7 @@ def render():
     if not ventas_dia.empty:
         with st.expander("Ver detalle de ventas del día"):
             st.dataframe(
-                ventas_dia[["hora", "usuario", "seccion", "producto", "cantidad", "total", "metodo_pago"]],
+                ventas_dia[["hora", "usuario", "seccion", "producto", "cantidad", "total", "metodo_pago", "ganancia"]],
                 use_container_width=True, hide_index=True,
             )
 

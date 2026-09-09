@@ -24,7 +24,7 @@ HOJAS = {
     "Ventas": [
         "id_venta", "fecha", "hora", "usuario", "seccion", "id_producto",
         "producto", "cantidad", "precio_unitario", "total", "metodo_pago",
-        "turno",
+        "turno", "costo_unitario", "ganancia",
     ],
     "CorteCaja": [
         "id_corte", "fecha", "turno", "usuario",

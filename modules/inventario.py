@@ -38,14 +38,14 @@ def render():
 
         if not df_mostrar.empty:
             df_mostrar = df_mostrar.copy()
-            df_mostrar["stock_actual_num"] = pd.to_numeric(df_mostrar["stock_actual"], errors="coerce").fillna(0)
-            df_mostrar["stock_minimo_num"] = pd.to_numeric(df_mostrar["stock_minimo"], errors="coerce").fillna(0)
-            bajo_stock = df_mostrar[df_mostrar["stock_actual_num"] <= df_mostrar["stock_minimo_num"]]
-            if not bajo_stock.empty:
-                st.warning(f"⚠️ {len(bajo_stock)} producto(s) en o por debajo del stock mínimo.")
+            stock_actual_num = pd.to_numeric(df_mostrar["stock_actual"], errors="coerce").fillna(0)
+            stock_minimo_num = pd.to_numeric(df_mostrar["stock_minimo"], errors="coerce").fillna(0)
+            mask_bajo_stock = stock_actual_num <= stock_minimo_num
+            if mask_bajo_stock.any():
+                st.warning(f"⚠️ {int(mask_bajo_stock.sum())} producto(s) en o por debajo del stock mínimo.")
 
             def resaltar_bajo_stock(row):
-                if row["stock_actual_num"] <= row["stock_minimo_num"]:
+                if mask_bajo_stock.get(row.name, False):
                     return ["background-color: #ffe1e1"] * len(row)
                 return [""] * len(row)
 

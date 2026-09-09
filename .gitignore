@@ -1,0 +1,10 @@
+# Nunca subir llaves ni credenciales
+*.json
+credentials.json
+.streamlit/secrets.toml
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
