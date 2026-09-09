@@ -8,6 +8,7 @@ import streamlit as st
 from config import SECCIONES_DEFAULT, UNIDADES_VENTA, ETIQUETAS_UNIDAD
 from sheets_connector import leer_hoja, agregar_fila, actualizar_fila_por_id, siguiente_id
 from auth import rol_actual
+import modules.codigos_barras as codigos_barras
 
 
 def _secciones_disponibles(df: pd.DataFrame):
@@ -24,7 +25,9 @@ def render():
 
     df = leer_hoja("Inventario")
 
-    tab_ver, tab_agregar, tab_editar = st.tabs(["Ver inventario", "Agregar producto", "Editar / Reabastecer"])
+    tab_ver, tab_agregar, tab_editar, tab_codigos = st.tabs(
+        ["Ver inventario", "Agregar producto", "Editar / Reabastecer", "🏷️ Códigos de barras"]
+    )
 
     with tab_ver:
         col1, col2 = st.columns([2, 1])
@@ -179,3 +182,6 @@ def render():
                     eliminar_fila_por_id("Inventario", "id_producto", id_sel)
                     st.toast("Producto eliminado.", icon="🗑️")
                     st.rerun()
+
+    with tab_codigos:
+        codigos_barras.render_tab(df)
