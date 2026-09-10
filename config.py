@@ -128,11 +128,11 @@ QUIEN_PAGA_ENVIO = ["Cliente", "Tienda"]
 MENU_POR_ROL = {
     "admin": [
         "Inicio", "Inventario", "Stock", "Ventas diarias", "Corte de caja",
-        "Proveedores", "Pagos a proveedores", "Nómina", "Mensajería",
+        "Reportes", "Proveedores", "Pagos a proveedores", "Nómina", "Mensajería",
         "Usuarios",
     ],
     "encargado": [
         "Inicio", "Inventario", "Stock", "Ventas diarias", "Corte de caja",
-        "Mensajería",
+        "Reportes", "Mensajería",
     ],
 }

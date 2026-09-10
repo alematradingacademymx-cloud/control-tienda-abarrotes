@@ -13,7 +13,7 @@ from auth import (
     crear_usuario, restaurar_sesion,
 )
 from modules import (
-    inicio, inventario, stock, ventas, corte_caja, proveedores,
+    inicio, inventario, stock, ventas, corte_caja, reportes, proveedores,
     pagos_proveedores, nomina, mensajeria, usuarios, theme,
 )
 
@@ -82,6 +82,7 @@ def main():
         "Stock": stock.render,
         "Ventas diarias": ventas.render,
         "Corte de caja": corte_caja.render,
+        "Reportes": reportes.render,
         "Proveedores": proveedores.render,
         "Pagos a proveedores": pagos_proveedores.render,
         "Nómina": nomina.render,
