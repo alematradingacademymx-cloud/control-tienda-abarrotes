@@ -127,12 +127,12 @@ QUIEN_PAGA_ENVIO = ["Cliente", "Tienda"]
 # Menú y permisos por rol: qué secciones ve cada rol en la barra lateral
 MENU_POR_ROL = {
     "admin": [
-        "Inicio", "Inventario", "Ventas diarias", "Corte de caja",
+        "Inicio", "Inventario", "Stock", "Ventas diarias", "Corte de caja",
         "Proveedores", "Pagos a proveedores", "Nómina", "Mensajería",
         "Usuarios",
     ],
     "encargado": [
-        "Inicio", "Inventario", "Ventas diarias", "Corte de caja",
+        "Inicio", "Inventario", "Stock", "Ventas diarias", "Corte de caja",
         "Mensajería",
     ],
 }

@@ -13,7 +13,7 @@ from auth import (
     crear_usuario, restaurar_sesion,
 )
 from modules import (
-    inicio, inventario, ventas, corte_caja, proveedores,
+    inicio, inventario, stock, ventas, corte_caja, proveedores,
     pagos_proveedores, nomina, mensajeria, usuarios, theme,
 )
 
@@ -79,6 +79,7 @@ def main():
     paginas = {
         "Inicio": inicio.render,
         "Inventario": inventario.render,
+        "Stock": stock.render,
         "Ventas diarias": ventas.render,
         "Corte de caja": corte_caja.render,
         "Proveedores": proveedores.render,
