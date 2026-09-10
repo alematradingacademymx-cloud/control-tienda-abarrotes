@@ -94,13 +94,36 @@ CSS_CLARO = """
         border-color: #c7cdd6 !important;
     }
     .stButton button, .stFormSubmitButton button, .stDownloadButton button {
-        background-color: #ffffff;
-        color: #0b5fff;
-        border: 1px solid #c7cdd6;
+        background-color: #0b5fff !important;
+        color: #ffffff !important;
+        border: 1px solid #0b5fff !important;
     }
-    .stButton button:hover, .stFormSubmitButton button:hover {
-        border-color: #0b5fff;
-        color: #084bcc;
+    .stButton button *, .stFormSubmitButton button *, .stDownloadButton button * {
+        color: #ffffff !important;
+        fill: #ffffff !important;
+    }
+    .stButton button:hover, .stFormSubmitButton button:hover, .stDownloadButton button:hover {
+        background-color: #084bcc !important;
+        border-color: #084bcc !important;
+        color: #ffffff !important;
+    }
+    .stButton button:disabled, .stFormSubmitButton button:disabled {
+        background-color: #a9c3f5 !important;
+        border-color: #a9c3f5 !important;
+        color: #ffffff !important;
+        opacity: 1 !important;
+    }
+    /* Botones +/- de los campos numéricos (number_input): sin esta regla se
+    quedaban con el estilo oscuro por defecto de Streamlit y no se veían
+    bien en modo claro (cuadro negro, texto del mismo color). */
+    [data-testid="stNumberInput"] button {
+        background-color: #0b5fff !important;
+        border: 1px solid #0b5fff !important;
+    }
+    [data-testid="stNumberInput"] button svg,
+    [data-testid="stNumberInput"] button * {
+        fill: #ffffff !important;
+        color: #ffffff !important;
     }
     [data-testid="stMetric"] {
         background-color: #f4f6fa;
