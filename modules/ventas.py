@@ -3,7 +3,14 @@ escáner o buscando manualmente), y hasta el final se confirma la venta
 completa: se elige el método de pago y, si es efectivo, se calcula el
 cambio exacto a entregar. La lógica del carrito y el registro de la venta
 viven en carrito_utils.py (se comparten con Mensajería, que registra la
-venta de un envío exactamente de la misma forma)."""
+venta de un envío exactamente de la misma forma).
+
+La pantalla está pensada como una sola vista de "punto de venta": el
+código del producto arriba (escanea o escribe y Enter agrega), una barra
+de acciones rápidas (Buscar / Vaciar / Cobrar), el ticket en una tabla en
+medio, y el total al final — todo visible de un jalón, sin pestañas ni
+tener que bajar mucho la pantalla, muy parecido a como ya están
+acostumbrados a trabajar en mostrador."""
 
 import pandas as pd
 import streamlit as st
@@ -61,25 +68,44 @@ def _render_confirmacion_venta(total: float):
             st.rerun()
 
 
-def _render_carrito():
-    st.subheader("🛒 Carrito de la venta actual")
-    total = carrito_utils.render_lista_carrito(CLAVE_CARRITO, PREFIJO)
+def _render_ticket(clave: str, key_prefix: str) -> float:
+    """Muestra el carrito como una tabla de ticket (Código / Producto /
+    Precio / Cant. / Importe), con sus controles para quitar una unidad o
+    la línea completa. Devuelve el total actual (0.0 si está vacío)."""
+    st.subheader("🛒 Ticket de venta")
+    carrito = carrito_utils.obtener_carrito(clave)
+    if not carrito:
+        st.info("Todavía no has agregado productos. Escanea o busca uno arriba para empezar.")
+        return 0.0
 
-    if not carrito_utils.obtener_carrito(CLAVE_CARRITO):
-        return
+    columnas_grid = [1.6, 3, 1.1, 0.8, 1.2, 0.55, 0.55]
+    col_h1, col_h2, col_h3, col_h4, col_h5, col_h6, col_h7 = st.columns(columnas_grid)
+    col_h1.markdown("**Código**")
+    col_h2.markdown("**Producto**")
+    col_h3.markdown("**Precio**")
+    col_h4.markdown("**Cant.**")
+    col_h5.markdown("**Importe**")
+    col_h6.markdown(" ")
+    col_h7.markdown(" ")
 
-    if st.button("🗑️ Vaciar carrito", key=f"{PREFIJO}_vaciar"):
-        carrito_utils.vaciar_carrito(CLAVE_CARRITO)
-        st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = False
-        st.rerun()
-
-    if not st.session_state.get(f"{PREFIJO}_mostrar_confirmacion"):
-        if st.button("💵 Confirmar venta", type="primary", key=f"{PREFIJO}_btn_abrir_confirmacion"):
-            st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = True
+    for i, item in enumerate(carrito):
+        col1, col2, col3, col4, col5, col6, col7 = st.columns(columnas_grid)
+        col1.write(item.get("codigo_barras") or item["id_producto"])
+        col2.write(item["nombre_producto"])
+        col3.write(f"${item['precio_unitario']:,.2f}")
+        col4.write(f"{item['cantidad']:g}")
+        col5.write(f"**${item['subtotal']:,.2f}**")
+        if col6.button("➖", key=f"{key_prefix}_ticket_menos_{i}", help="Quitar 1 unidad (por si escaneaste de más)"):
+            carrito_utils.restar_uno_del_carrito(clave, i)
             st.rerun()
-    else:
-        st.divider()
-        _render_confirmacion_venta(total)
+        if col7.button("❌", key=f"{key_prefix}_ticket_quitar_{i}", help="Quitar esta línea del ticket"):
+            carrito_utils.quitar_del_carrito(clave, i)
+            st.rerun()
+
+    st.divider()
+    total = carrito_utils.total_carrito(clave)
+    st.metric("Total", f"${total:,.2f}")
+    return total
 
 
 def render():
@@ -92,41 +118,69 @@ def render():
 
     inventario["stock_actual_num"] = pd.to_numeric(inventario["stock_actual"], errors="coerce").fillna(0)
 
-    carrito_utils.render_selector_turno(PREFIJO)
+    col_turno, _ = st.columns([1, 3])
+    with col_turno:
+        carrito_utils.render_selector_turno(PREFIJO)
 
     st.divider()
-    tab_escaner, tab_manual = st.tabs(["📷 Escanear código de barras", "🔍 Buscar manualmente"])
-    with tab_escaner:
-        carrito_utils.render_agregar_por_escaner(CLAVE_CARRITO, inventario, PREFIJO)
-    with tab_manual:
-        carrito_utils.render_agregar_manual(CLAVE_CARRITO, inventario, PREFIJO)
+
+    # --- Código del producto: arriba y siempre visible, como en un punto
+    # de venta de mostrador — escanea o escribe el código y presiona Enter.
+    carrito_utils.render_agregar_por_escaner(CLAVE_CARRITO, inventario, PREFIJO)
+
+    # --- Barra de acciones rápidas ---
+    col_b1, col_b2, col_b3 = st.columns(3)
+    with col_b1:
+        if st.button("🔍 Buscar producto", key=f"{PREFIJO}_toggle_buscar", use_container_width=True):
+            st.session_state[f"{PREFIJO}_mostrar_busqueda"] = not st.session_state.get(f"{PREFIJO}_mostrar_busqueda", False)
+    with col_b2:
+        if st.button("🗑️ Vaciar carrito", key=f"{PREFIJO}_vaciar_toolbar", use_container_width=True):
+            carrito_utils.vaciar_carrito(CLAVE_CARRITO)
+            st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = False
+            st.rerun()
+    with col_b3:
+        if st.button("💵 Cobrar", key=f"{PREFIJO}_cobrar_toolbar", type="primary", use_container_width=True):
+            if not carrito_utils.obtener_carrito(CLAVE_CARRITO):
+                st.warning("Agrega al menos un producto antes de cobrar.")
+            else:
+                st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = True
+                st.rerun()
+
+    if st.session_state.get(f"{PREFIJO}_mostrar_busqueda"):
+        with st.expander("🔍 Buscar producto manualmente", expanded=True):
+            carrito_utils.render_agregar_manual(CLAVE_CARRITO, inventario, PREFIJO)
 
     st.divider()
-    _render_carrito()
+
+    total = _render_ticket(CLAVE_CARRITO, PREFIJO)
+
+    if st.session_state.get(f"{PREFIJO}_mostrar_confirmacion"):
+        st.divider()
+        _render_confirmacion_venta(total)
 
     st.divider()
-    st.subheader("Ventas de hoy")
-    ventas = leer_hoja("Ventas")
-    fecha_hoy, _ = timestamp_hoy()
-    ventas_hoy = ventas[ventas["fecha"] == fecha_hoy].copy()
+    with st.expander("📊 Ventas de hoy"):
+        ventas = leer_hoja("Ventas")
+        fecha_hoy, _ = timestamp_hoy()
+        ventas_hoy = ventas[ventas["fecha"] == fecha_hoy].copy()
 
-    if ventas_hoy.empty:
-        st.info("Aún no hay ventas registradas hoy.")
-    else:
-        ventas_hoy["total_num"] = pd.to_numeric(ventas_hoy["total"], errors="coerce").fillna(0)
-        ventas_hoy["ganancia_num"] = pd.to_numeric(ventas_hoy["ganancia"], errors="coerce").fillna(0)
-        total_dia = ventas_hoy["total_num"].sum()
-        ganancia_dia = ventas_hoy["ganancia_num"].sum()
-        resumen = ventas_hoy.groupby("metodo_pago")["total_num"].sum().reindex(METODOS_PAGO, fill_value=0)
+        if ventas_hoy.empty:
+            st.info("Aún no hay ventas registradas hoy.")
+        else:
+            ventas_hoy["total_num"] = pd.to_numeric(ventas_hoy["total"], errors="coerce").fillna(0)
+            ventas_hoy["ganancia_num"] = pd.to_numeric(ventas_hoy["ganancia"], errors="coerce").fillna(0)
+            total_dia = ventas_hoy["total_num"].sum()
+            ganancia_dia = ventas_hoy["ganancia_num"].sum()
+            resumen = ventas_hoy.groupby("metodo_pago")["total_num"].sum().reindex(METODOS_PAGO, fill_value=0)
 
-        colr1, colr2, colr3, colr4, colr5 = st.columns(5)
-        colr1.metric("Total del día", f"${total_dia:,.2f}")
-        for col, metodo in zip((colr2, colr3, colr4), METODOS_PAGO):
-            col.metric(metodo, f"${resumen.get(metodo, 0):,.2f}")
-        colr5.metric("Ganancia estimada", f"${ganancia_dia:,.2f}")
+            colr1, colr2, colr3, colr4, colr5 = st.columns(5)
+            colr1.metric("Total del día", f"${total_dia:,.2f}")
+            for col, metodo in zip((colr2, colr3, colr4), METODOS_PAGO):
+                col.metric(metodo, f"${resumen.get(metodo, 0):,.2f}")
+            colr5.metric("Ganancia estimada", f"${ganancia_dia:,.2f}")
 
-        st.dataframe(
-            ventas_hoy[["id_venta", "hora", "usuario", "seccion", "producto", "cantidad", "precio_unitario", "total", "metodo_pago", "ganancia", "turno"]],
-            use_container_width=True,
-            hide_index=True,
-        )
+            st.dataframe(
+                ventas_hoy[["id_venta", "hora", "usuario", "seccion", "producto", "cantidad", "precio_unitario", "total", "metodo_pago", "ganancia", "turno"]],
+                use_container_width=True,
+                hide_index=True,
+            )

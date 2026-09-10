@@ -93,6 +93,7 @@ def agregar_al_carrito(clave: str, fila_producto: dict, seccion: str, cantidad: 
     carrito.append({
         "id_producto": fila_producto["id_producto"],
         "nombre_producto": fila_producto["nombre_producto"],
+        "codigo_barras": str(fila_producto.get("codigo_barras", "") or ""),
         "seccion": seccion,
         "cantidad": cantidad,
         "precio_unitario": precio_unitario,
