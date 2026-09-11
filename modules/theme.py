@@ -125,6 +125,53 @@ CSS_CLARO = """
         fill: #ffffff !important;
         color: #ffffff !important;
     }
+    /* Cuadros de selección (Sección, Producto, Método de pago, etc.): con
+    versiones más nuevas de Streamlit la regla de arriba a veces ya no
+    alcanza a cubrir todo el cuadro, y se quedaba con el fondo oscuro por
+    defecto (cuadro negro, letras del mismo color, ilegible). Aquí se cubre
+    con más fuerza, incluyendo el menú de opciones que se abre al hacer
+    clic (ese menú se dibuja aparte, fuera del cuadro). */
+    [data-testid="stSelectbox"] > div > div,
+    [data-testid="stSelectbox"] div[data-baseweb="select"],
+    [data-testid="stSelectbox"] div[data-baseweb="select"] > div,
+    div[data-baseweb="select"] {
+        background-color: #ffffff !important;
+        border-color: #c7cdd6 !important;
+    }
+    [data-testid="stSelectbox"] * {
+        color: #0e1117 !important;
+        fill: #0e1117 !important;
+    }
+    div[data-baseweb="popover"] div[data-baseweb="menu"],
+    ul[role="listbox"], li[role="option"] {
+        background-color: #ffffff !important;
+        color: #0e1117 !important;
+    }
+    li[role="option"]:hover, li[aria-selected="true"] {
+        background-color: #f4f6fa !important;
+    }
+    /* Encabezado de los "expander" (el título que se le da clic para
+    abrir/cerrar, ej. "Buscar producto manualmente"): igual se quedaba con
+    el fondo oscuro por defecto y el texto no se veía. */
+    [data-testid="stExpander"] summary {
+        background-color: #f4f6fa !important;
+    }
+    [data-testid="stExpander"] summary * {
+        color: #0e1117 !important;
+        fill: #0e1117 !important;
+    }
+    /* Avisos flotantes (st.toast) que aparecen arriba a la derecha al
+    guardar algo: se quedaban con el fondo oscuro por defecto y el texto
+    (forzado a oscuro por las reglas de arriba) no se alcanzaba a leer. */
+    [data-testid="stToast"] {
+        background-color: #ffffff !important;
+        color: #0e1117 !important;
+        border: 1px solid #e3e7ee !important;
+        box-shadow: 0 4px 14px rgba(14, 17, 23, 0.15) !important;
+    }
+    [data-testid="stToast"] * {
+        color: #0e1117 !important;
+    }
     [data-testid="stMetric"] {
         background-color: #f4f6fa;
         border: 1px solid #e3e7ee;

@@ -126,6 +126,24 @@ def _inyectar_atajos():
     )
 
 
+def _limpiar_pantalla_venta():
+    """Deja la pantalla lista para la siguiente venta: cierra la búsqueda
+    manual y borra la sección/producto/cantidad/método de pago que hayan
+    quedado seleccionados, para no arrastrarlos a la siguiente venta. El
+    carrito ya se vacía por su cuenta dentro de registrar_venta_carrito."""
+    for key in (
+        f"{PREFIJO}_mostrar_busqueda",
+        f"{PREFIJO}_seccion_manual",
+        f"{PREFIJO}_producto_manual",
+        f"{PREFIJO}_cantidad_manual",
+        f"{PREFIJO}_cantidad_escaner",
+        f"{PREFIJO}_producto_escaneado",
+        f"{PREFIJO}_metodo_pago",
+        f"{PREFIJO}_recibido_efectivo",
+    ):
+        st.session_state.pop(key, None)
+
+
 def _procesar_cobro_rapido():
     """Registra la venta completa de un solo golpe, en efectivo y sin
     calcular cambio — pensado para el atajo Ctrl+C: nada de abrir un panel
@@ -138,8 +156,10 @@ def _procesar_cobro_rapido():
     turno_venta = st.session_state.get(f"{PREFIJO}_turno_actual", "")
     total_actual = carrito_utils.total_carrito(CLAVE_CARRITO)
     id_venta = carrito_utils.registrar_venta_carrito(CLAVE_CARRITO, "Efectivo", turno=turno_venta)
+    mensaje = f"Venta {id_venta} registrada por ${total_actual:,.2f} (Efectivo)."
     st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = False
-    st.toast(f"Venta {id_venta} registrada por ${total_actual:,.2f} (Efectivo).", icon="⚡")
+    _limpiar_pantalla_venta()
+    st.session_state[f"{PREFIJO}_ultima_venta"] = mensaje
     st.rerun()
 
 
@@ -181,12 +201,12 @@ def _render_confirmacion_venta(total: float):
         # cambio, no un requisito para guardar.
         turno_venta = st.session_state.get(f"{PREFIJO}_turno_actual", "")
         id_venta = carrito_utils.registrar_venta_carrito(CLAVE_CARRITO, metodo_pago, turno=turno_venta)
-        st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = False
-        st.session_state.pop(f"{PREFIJO}_recibido_efectivo", None)
         mensaje = f"Venta {id_venta} registrada por ${total:,.2f} ({metodo_pago})."
         if cambio is not None and cambio >= 0:
             mensaje += f" Cambio: ${cambio:,.2f}."
-        st.toast(mensaje, icon="✅")
+        st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = False
+        _limpiar_pantalla_venta()
+        st.session_state[f"{PREFIJO}_ultima_venta"] = mensaje
         st.rerun()
 
 
@@ -238,6 +258,9 @@ def render():
         "\"Cobrar (elegir método)\" con el mouse."
     )
     _inyectar_atajos()
+
+    if st.session_state.get(f"{PREFIJO}_ultima_venta"):
+        st.success(f"✅ {st.session_state.pop(f'{PREFIJO}_ultima_venta')}")
 
     inventario = leer_hoja("Inventario")
     if inventario.empty:
