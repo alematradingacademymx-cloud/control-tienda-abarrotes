@@ -25,11 +25,12 @@ PREFIJO = "venta"
 
 
 def _inyectar_atajos():
-    """Mantiene el campo de 'Código de barras' enfocado automáticamente
-    (para poder escanear sin darle clic primero) y activa los atajos
-    Ctrl+C o Alt+C (cobrar), Alt+B (buscar producto), Alt+V (vaciar
-    carrito) y Enter (confirmar la venta, cuando el panel de pago ya está
-    abierto).
+    """Mantiene enfocado, sin necesidad de mouse, el campo que le toca en
+    cada momento: el de 'Cantidad' cuando está pidiendo capturar un peso o
+    una cantidad manual, o si no el de 'Código de barras' — y activa los
+    atajos Ctrl+C o Alt+C (cobro rápido en efectivo, de un solo golpe),
+    Alt+B (buscar producto), Alt+V (vaciar carrito) y Enter (confirmar la
+    venta, solo cuando se abrió el panel de "elegir método" con el mouse).
 
     Se usa Alt+letra en vez de solo la letra porque el campo de código se
     queda enfocado casi todo el tiempo — una letra suelta se interpretaría
@@ -57,21 +58,27 @@ def _inyectar_atajos():
                 return parentDoc.querySelector('input[aria-label="Código de barras"]');
             }
 
-            function campoRecibido() {
-                return parentDoc.querySelector('input[aria-label="¿Cuánto dinero te dio el cliente?"]');
+            function campoCantidad() {
+                return parentDoc.querySelector('input[aria-label="Cantidad"]');
             }
 
-            // --- Mantener enfocado el campo de código, para poder escanear
-            // sin necesidad de darle clic primero. Solo se lo "roba" a la
-            // página cuando no hay nada más en uso (nadie escribiendo en
-            // otro campo ni con un botón recién presionado). ---
+            function campoRecibido() {
+                return parentDoc.querySelector('input[aria-label="¿Cuánto dinero te dio el cliente? (opcional, solo para calcular el cambio)"]');
+            }
+
+            // --- Enfocar automáticamente el campo que corresponda, sin
+            // necesidad de mouse: si está pidiendo una cantidad (peso, o
+            // búsqueda manual) le da prioridad a ese; si no, al de código,
+            // para poder escanear sin darle clic primero. Solo se lo "roba"
+            // a la página cuando no hay nada más en uso (nadie escribiendo
+            // en otro campo ni con un botón recién presionado). ---
             setInterval(function() {
-                const campo = campoCodigo();
-                if (!campo) return;
+                const objetivo = campoCantidad() || campoCodigo();
+                if (!objetivo) return;
                 const activo = parentDoc.activeElement;
                 const libre = !activo || activo === parentDoc.body || activo.tagName === 'BUTTON';
-                if (libre && activo !== campo) {
-                    campo.focus();
+                if (libre && activo !== objetivo) {
+                    objetivo.focus();
                 }
             }, 400);
 
@@ -84,10 +91,11 @@ def _inyectar_atajos():
             window.parent.document.addEventListener('keydown', function(e) {
                 const activo = parentDoc.activeElement;
 
-                // Ctrl+C (o Cmd+C en Mac) cobra directo, sin necesidad de
-                // soltar el código de barras primero.
+                // Ctrl+C (o Cmd+C en Mac) hace el cobro completo de un
+                // golpe: registra la venta en efectivo sin abrir ningún
+                // panel ni pedir un Enter aparte.
                 if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'c') {
-                    const boton = encontrarBoton('Cobrar');
+                    const boton = encontrarBoton('Cobro rápido');
                     if (boton) { e.preventDefault(); boton.click(); }
                     return;
                 }
@@ -97,7 +105,7 @@ def _inyectar_atajos():
                     let boton = null;
                     if (tecla === 'b') boton = encontrarBoton('Buscar producto');
                     else if (tecla === 'v') boton = encontrarBoton('Vaciar carrito');
-                    else if (tecla === 'c') boton = encontrarBoton('Cobrar');
+                    else if (tecla === 'c') boton = encontrarBoton('Cobro rápido');
                     if (boton) { e.preventDefault(); boton.click(); }
                     return;
                 }
@@ -116,6 +124,23 @@ def _inyectar_atajos():
         """,
         height=0,
     )
+
+
+def _procesar_cobro_rapido():
+    """Registra la venta completa de un solo golpe, en efectivo y sin
+    calcular cambio — pensado para el atajo Ctrl+C: nada de abrir un panel
+    ni de presionar Enter después, todo en una sola acción. Si se necesita
+    elegir otro método de pago o calcular el cambio exacto, sigue estando
+    el botón "Cobrar (elegir método)" de al lado."""
+    if not carrito_utils.obtener_carrito(CLAVE_CARRITO):
+        st.warning("Agrega al menos un producto antes de cobrar.")
+        return
+    turno_venta = st.session_state.get(f"{PREFIJO}_turno_actual", "")
+    total_actual = carrito_utils.total_carrito(CLAVE_CARRITO)
+    id_venta = carrito_utils.registrar_venta_carrito(CLAVE_CARRITO, "Efectivo", turno=turno_venta)
+    st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = False
+    st.toast(f"Venta {id_venta} registrada por ${total_actual:,.2f} (Efectivo).", icon="⚡")
+    st.rerun()
 
 
 def _render_confirmacion_venta(total: float):
@@ -207,7 +232,11 @@ def _render_ticket(clave: str, key_prefix: str) -> float:
 
 def render():
     st.header("🧾 Ventas diarias")
-    st.caption("Atajos: Ctrl+C (o Alt+C) cobrar · Alt+B buscar producto · Alt+V vaciar carrito · Enter confirma el pago.")
+    st.caption(
+        "Atajos: Ctrl+C (o Alt+C) cobro rápido en efectivo, de un solo golpe · "
+        "Alt+B buscar producto · Alt+V vaciar carrito · Enter confirma solo si abriste "
+        "\"Cobrar (elegir método)\" con el mouse."
+    )
     _inyectar_atajos()
 
     inventario = leer_hoja("Inventario")
@@ -228,7 +257,7 @@ def render():
     carrito_utils.render_agregar_por_escaner(CLAVE_CARRITO, inventario, PREFIJO)
 
     # --- Barra de acciones rápidas ---
-    col_b1, col_b2, col_b3 = st.columns(3)
+    col_b1, col_b2, col_b3, col_b4 = st.columns(4)
     with col_b1:
         if st.button("🔍 Buscar producto", key=f"{PREFIJO}_toggle_buscar", use_container_width=True):
             st.session_state[f"{PREFIJO}_mostrar_busqueda"] = not st.session_state.get(f"{PREFIJO}_mostrar_busqueda", False)
@@ -238,12 +267,21 @@ def render():
             st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = False
             st.rerun()
     with col_b3:
-        if st.button("💵 Cobrar", key=f"{PREFIJO}_cobrar_toolbar", type="primary", use_container_width=True):
+        if st.button(
+            "💵 Cobrar (elegir método)", key=f"{PREFIJO}_cobrar_toolbar", use_container_width=True,
+            help="Abre el panel para elegir Efectivo/Tarjeta/Transferencia y calcular el cambio exacto.",
+        ):
             if not carrito_utils.obtener_carrito(CLAVE_CARRITO):
                 st.warning("Agrega al menos un producto antes de cobrar.")
             else:
                 st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = True
                 st.rerun()
+    with col_b4:
+        if st.button(
+            "⚡ Cobro rápido (Efectivo)", key=f"{PREFIJO}_cobro_rapido", type="primary", use_container_width=True,
+            help="Registra la venta de inmediato en efectivo, sin abrir ningún panel (Ctrl+C).",
+        ):
+            _procesar_cobro_rapido()
 
     if st.session_state.get(f"{PREFIJO}_mostrar_busqueda"):
         with st.expander("🔍 Buscar producto manualmente", expanded=True):
