@@ -266,7 +266,7 @@ def render_agregar_por_escaner(clave: str, inventario: pd.DataFrame, key_prefix:
     # cuanto se agrega.
     cantidad_key = f"{key_prefix}_cantidad_escaner"
     with st.form(f"{key_prefix}_form_cantidad_escaner", clear_on_submit=False):
-        colc1, colc2 = st.columns(2)
+        colc1, colc2, colc3 = st.columns(3)
         with colc1:
             # Vacío en vez de venir con "1.00" ya puesto: así el empleado
             # siempre escribe la cantidad real a mano y nunca se le pasa
@@ -277,6 +277,14 @@ def render_agregar_por_escaner(clave: str, inventario: pd.DataFrame, key_prefix:
             )
         with colc2:
             st.metric("Precio unitario", f"${precio_unitario:,.2f}")
+        with colc3:
+            # Este valor es solo el inicial (para cuando no hay JavaScript,
+            # como en Mensajería). En Ventas diarias se recalcula al
+            # instante con cada tecla que se escribe en "Cantidad" gracias al
+            # script inyectado en ventas.py — así se ve junto al precio
+            # unitario sin tener que bajar la página, incluso antes de
+            # presionar Enter.
+            st.metric("Total a pagar", f"${precio_unitario * (cantidad or 0):,.2f}")
         agregar = st.form_submit_button("➕ Agregar al carrito (o presiona Enter)", type="primary")
 
     if agregar:
@@ -332,7 +340,7 @@ def render_agregar_manual(clave: str, inventario: pd.DataFrame, key_prefix: str)
     # form para que el menú reaccione al instante al elegirlos.
     cantidad_key = f"{key_prefix}_cantidad_manual"
     with st.form(f"{key_prefix}_form_cantidad_manual", clear_on_submit=False):
-        colc1, colc2 = st.columns(2)
+        colc1, colc2, colc3 = st.columns(3)
         with colc1:
             # Vacío en vez de "1.00" por default, igual que en el escáner:
             # el empleado siempre escribe la cantidad real a mano.
@@ -342,6 +350,11 @@ def render_agregar_manual(clave: str, inventario: pd.DataFrame, key_prefix: str)
             )
         with colc2:
             st.metric("Precio unitario", f"${precio_unitario:,.2f}")
+        with colc3:
+            # Igual que en el escáner: valor inicial nada más, en Ventas
+            # diarias se recalcula al instante con JavaScript mientras se
+            # escribe la cantidad (ver ventas.py).
+            st.metric("Total a pagar", f"${precio_unitario * (cantidad or 0):,.2f}")
         agregar = st.form_submit_button("➕ Agregar al carrito (o presiona Enter)", type="primary")
 
     if agregar:

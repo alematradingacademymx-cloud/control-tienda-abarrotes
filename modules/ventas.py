@@ -31,6 +31,9 @@ def _inyectar_atajos():
     atajos Ctrl+C o Alt+C (cobro rápido en efectivo, de un solo golpe),
     Alt+B (buscar producto), Alt+V (vaciar carrito) y Enter (confirmar la
     venta, solo cuando se abrió el panel de "elegir método" con el mouse).
+    También recalcula el "Total a pagar" al instante, tecla por tecla,
+    mientras se escribe la Cantidad — sin esperar a presionar Enter — para
+    que se vea junto al Precio unitario sin bajar la página.
 
     Se usa Alt+letra en vez de solo la letra porque el campo de código se
     queda enfocado casi todo el tiempo — una letra suelta se interpretaría
@@ -66,6 +69,47 @@ def _inyectar_atajos():
                 return parentDoc.querySelector('input[aria-label="¿Cuánto dinero te dio el cliente? (opcional, solo para calcular el cambio)"]');
             }
 
+            // --- Total a pagar en vivo: por cada formulario que tenga un
+            // campo "Cantidad", busca dentro de ese mismo formulario el
+            // recuadro "Precio unitario" y el de "Total a pagar", y conecta
+            // el campo Cantidad para que, con cada tecla (sin esperar a
+            // Enter ni a que Streamlit vuelva a correr el script), recalcule
+            // y actualice el Total a pagar multiplicando por el precio. Se
+            // engancha una sola vez por cada campo (con una bandera en el
+            // propio elemento) para no duplicar el cálculo en cada
+            // intervalo. ---
+            function actualizarTotalesEnVivo() {
+                const formularios = parentDoc.querySelectorAll('[data-testid="stForm"]');
+                formularios.forEach(function(form) {
+                    const campoCant = form.querySelector('input[aria-label="Cantidad"]');
+                    if (!campoCant || campoCant.__totalVivoConectado) return;
+
+                    let precioEl = null, totalEl = null;
+                    form.querySelectorAll('[data-testid="stMetric"]').forEach(function(m) {
+                        const etiqueta = m.querySelector('[data-testid="stMetricLabel"]');
+                        const valor = m.querySelector('[data-testid="stMetricValue"]');
+                        if (!etiqueta || !valor) return;
+                        const texto = etiqueta.textContent || '';
+                        if (texto.includes('Precio unitario')) precioEl = valor;
+                        if (texto.includes('Total a pagar')) totalEl = valor;
+                    });
+                    if (!precioEl || !totalEl) return;
+
+                    campoCant.__totalVivoConectado = true;
+                    const recalcular = function() {
+                        let cantidad = parseFloat(campoCant.value);
+                        if (isNaN(cantidad) || cantidad < 0) cantidad = 0;
+                        const precioTexto = (precioEl.textContent || '').replace(/[^0-9.,-]/g, '').replace(/,/g, '');
+                        let precio = parseFloat(precioTexto);
+                        if (isNaN(precio)) precio = 0;
+                        const total = cantidad * precio;
+                        totalEl.textContent = '$' + total.toLocaleString('en-US', {minimumFractionDigits: 2, maximumFractionDigits: 2});
+                    };
+                    campoCant.addEventListener('input', recalcular);
+                    campoCant.addEventListener('keyup', recalcular);
+                });
+            }
+
             // --- Enfocar automáticamente el campo que corresponda, sin
             // necesidad de mouse: si está pidiendo una cantidad (peso, o
             // búsqueda manual) le da prioridad a ese; si no, al de código,
@@ -73,6 +117,7 @@ def _inyectar_atajos():
             // a la página cuando no hay nada más en uso (nadie escribiendo
             // en otro campo ni con un botón recién presionado). ---
             setInterval(function() {
+                actualizarTotalesEnVivo();
                 const objetivo = campoCantidad() || campoCodigo();
                 if (!objetivo) return;
                 const activo = parentDoc.activeElement;
