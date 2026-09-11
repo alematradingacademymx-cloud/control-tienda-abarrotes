@@ -268,14 +268,20 @@ def render_agregar_por_escaner(clave: str, inventario: pd.DataFrame, key_prefix:
     with st.form(f"{key_prefix}_form_cantidad_escaner", clear_on_submit=False):
         colc1, colc2 = st.columns(2)
         with colc1:
-            cantidad = st.number_input("Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=1.0, key=cantidad_key)
+            # Vacío en vez de venir con "1.00" ya puesto: así el empleado
+            # siempre escribe la cantidad real a mano y nunca se le pasa
+            # por alto dejar el "1" que traía por default.
+            cantidad = st.number_input(
+                "Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=None,
+                placeholder="Escribe la cantidad", key=cantidad_key,
+            )
         with colc2:
             st.metric("Precio unitario", f"${precio_unitario:,.2f}")
         agregar = st.form_submit_button("➕ Agregar al carrito (o presiona Enter)", type="primary")
 
     if agregar:
-        if cantidad <= 0:
-            st.error("La cantidad debe ser mayor a cero.")
+        if cantidad is None or cantidad <= 0:
+            st.error("Escribe una cantidad mayor a cero.")
         elif cantidad > stock_disp:
             st.error("No hay suficiente stock para esa cantidad.")
         else:
@@ -328,14 +334,19 @@ def render_agregar_manual(clave: str, inventario: pd.DataFrame, key_prefix: str)
     with st.form(f"{key_prefix}_form_cantidad_manual", clear_on_submit=False):
         colc1, colc2 = st.columns(2)
         with colc1:
-            cantidad = st.number_input("Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=1.0, key=cantidad_key)
+            # Vacío en vez de "1.00" por default, igual que en el escáner:
+            # el empleado siempre escribe la cantidad real a mano.
+            cantidad = st.number_input(
+                "Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=None,
+                placeholder="Escribe la cantidad", key=cantidad_key,
+            )
         with colc2:
             st.metric("Precio unitario", f"${precio_unitario:,.2f}")
         agregar = st.form_submit_button("➕ Agregar al carrito (o presiona Enter)", type="primary")
 
     if agregar:
-        if cantidad <= 0:
-            st.error("La cantidad debe ser mayor a cero.")
+        if cantidad is None or cantidad <= 0:
+            st.error("Escribe una cantidad mayor a cero.")
         elif cantidad > stock_disp:
             st.error("No hay suficiente stock para esa cantidad.")
         else:
