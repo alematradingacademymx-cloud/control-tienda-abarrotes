@@ -14,6 +14,7 @@ acostumbrados a trabajar en mostrador."""
 
 import pandas as pd
 import streamlit as st
+import streamlit.components.v1 as components
 
 from config import METODOS_PAGO
 from sheets_connector import leer_hoja, timestamp_hoy
@@ -21,6 +22,91 @@ import modules.carrito_utils as carrito_utils
 
 CLAVE_CARRITO = "carrito_venta"
 PREFIJO = "venta"
+
+
+def _inyectar_atajos():
+    """Mantiene el campo de 'Código de barras' enfocado automáticamente
+    (para poder escanear sin darle clic primero) y activa los atajos
+    Alt+B (buscar producto), Alt+V (vaciar carrito), Alt+C (cobrar) y Enter
+    (confirmar la venta, cuando el panel de pago ya está abierto).
+
+    Se usa Alt+letra en vez de solo la letra porque el campo de código se
+    queda enfocado casi todo el tiempo — una letra suelta se interpretaría
+    como parte de un código escaneado o escrito a mano, no como un atajo.
+
+    Esto es un truco que aprovecha cómo Streamlit arma su HTML por dentro
+    (no es una función oficial de Streamlit ni de este framework), así que
+    si en algún momento deja de funcionar bien después de actualizar la
+    versión de Streamlit, este es el primer lugar a revisar."""
+    components.html(
+        """
+        <script>
+        (function() {
+            const parentDoc = window.parent.document;
+
+            function encontrarBoton(texto) {
+                const botones = parentDoc.querySelectorAll('button');
+                for (const b of botones) {
+                    if (b.innerText && b.innerText.includes(texto)) return b;
+                }
+                return null;
+            }
+
+            function campoCodigo() {
+                return parentDoc.querySelector('input[aria-label="Código de barras"]');
+            }
+
+            function campoRecibido() {
+                return parentDoc.querySelector('input[aria-label="¿Cuánto dinero te dio el cliente?"]');
+            }
+
+            // --- Mantener enfocado el campo de código, para poder escanear
+            // sin necesidad de darle clic primero. Solo se lo "roba" a la
+            // página cuando no hay nada más en uso (nadie escribiendo en
+            // otro campo ni con un botón recién presionado). ---
+            setInterval(function() {
+                const campo = campoCodigo();
+                if (!campo) return;
+                const activo = parentDoc.activeElement;
+                const libre = !activo || activo === parentDoc.body || activo.tagName === 'BUTTON';
+                if (libre && activo !== campo) {
+                    campo.focus();
+                }
+            }, 400);
+
+            // --- Atajos de teclado (instalados una sola vez, aunque este
+            // script se vuelva a inyectar en cada actualización de la
+            // página). ---
+            if (window.parent.__ventasAtajosInstalados) return;
+            window.parent.__ventasAtajosInstalados = true;
+
+            window.parent.document.addEventListener('keydown', function(e) {
+                const activo = parentDoc.activeElement;
+
+                if (e.altKey && !e.ctrlKey && !e.metaKey) {
+                    const tecla = e.key.toLowerCase();
+                    let boton = null;
+                    if (tecla === 'b') boton = encontrarBoton('Buscar producto');
+                    else if (tecla === 'v') boton = encontrarBoton('Vaciar carrito');
+                    else if (tecla === 'c') boton = encontrarBoton('Cobrar');
+                    if (boton) { e.preventDefault(); boton.click(); }
+                    return;
+                }
+
+                if (e.key === 'Enter' && !e.altKey && !e.ctrlKey && !e.metaKey) {
+                    // No confirmar si se está escribiendo el código (ese Enter
+                    // ya busca/agrega el producto) ni el monto recibido (para
+                    // no confirmar a medio escribir la cantidad).
+                    if (activo === campoCodigo() || activo === campoRecibido()) return;
+                    const boton = encontrarBoton('Confirmar y registrar venta');
+                    if (boton) { e.preventDefault(); boton.click(); }
+                }
+            });
+        })();
+        </script>
+        """,
+        height=0,
+    )
 
 
 def _render_confirmacion_venta(total: float):
@@ -110,6 +196,8 @@ def _render_ticket(clave: str, key_prefix: str) -> float:
 
 def render():
     st.header("🧾 Ventas diarias")
+    st.caption("Atajos: Alt+B buscar producto · Alt+V vaciar carrito · Alt+C cobrar · Enter confirma el pago.")
+    _inyectar_atajos()
 
     inventario = leer_hoja("Inventario")
     if inventario.empty:
