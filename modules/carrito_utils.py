@@ -259,18 +259,21 @@ def render_agregar_por_escaner(clave: str, inventario: pd.DataFrame, key_prefix:
         f"Se vende por: {unidad_producto} — Stock disponible: {stock_disp:g}"
     )
 
-    # Fuera de un form: así el subtotal se recalcula al instante mientras
-    # cambias la cantidad, en vez de quedarse fijo hasta que envíes el form.
+    # Dentro de un form: escribes la cantidad (el peso) y presionas Enter
+    # para mandarlo directo al carrito, sin necesidad de darle clic a nada
+    # — más rápido para vender por peso seguido. El precio de contado se
+    # ve aparte; el importe final ya se ve en la línea del ticket en
+    # cuanto se agrega.
     cantidad_key = f"{key_prefix}_cantidad_escaner"
-    colc1, colc2, colc3 = st.columns(3)
-    with colc1:
-        cantidad = st.number_input("Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=1.0, key=cantidad_key)
-    with colc2:
-        st.metric("Precio unitario", f"${precio_unitario:,.2f}")
-    with colc3:
-        st.metric("Subtotal", f"${precio_unitario * cantidad:,.2f}")
+    with st.form(f"{key_prefix}_form_cantidad_escaner", clear_on_submit=False):
+        colc1, colc2 = st.columns(2)
+        with colc1:
+            cantidad = st.number_input("Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=1.0, key=cantidad_key)
+        with colc2:
+            st.metric("Precio unitario", f"${precio_unitario:,.2f}")
+        agregar = st.form_submit_button("➕ Agregar al carrito (o presiona Enter)", type="primary")
 
-    if st.button("➕ Agregar al carrito", key=f"{key_prefix}_btn_agregar_escaner"):
+    if agregar:
         if cantidad <= 0:
             st.error("La cantidad debe ser mayor a cero.")
         elif cantidad > stock_disp:
@@ -317,18 +320,20 @@ def render_agregar_manual(clave: str, inventario: pd.DataFrame, key_prefix: str)
         st.warning(f"Ya agregaste al carrito todo el stock disponible de '{nombre_producto}'.")
         return
 
-    # Fuera de un form: así el subtotal se recalcula al instante mientras
-    # cambias la cantidad, en vez de quedarse fijo hasta que envíes el form.
+    # Dentro de un form: escribes/ajustas la cantidad y presionas Enter
+    # para mandarlo directo al carrito, sin necesidad de darle clic a
+    # "Agregar al carrito" — la sección y el producto se quedan fuera del
+    # form para que el menú reaccione al instante al elegirlos.
     cantidad_key = f"{key_prefix}_cantidad_manual"
-    colc1, colc2, colc3 = st.columns(3)
-    with colc1:
-        cantidad = st.number_input("Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=1.0, key=cantidad_key)
-    with colc2:
-        st.metric("Precio unitario", f"${precio_unitario:,.2f}")
-    with colc3:
-        st.metric("Subtotal", f"${precio_unitario * cantidad:,.2f}")
+    with st.form(f"{key_prefix}_form_cantidad_manual", clear_on_submit=False):
+        colc1, colc2 = st.columns(2)
+        with colc1:
+            cantidad = st.number_input("Cantidad", min_value=0.0, max_value=stock_disp, step=1.0, value=1.0, key=cantidad_key)
+        with colc2:
+            st.metric("Precio unitario", f"${precio_unitario:,.2f}")
+        agregar = st.form_submit_button("➕ Agregar al carrito (o presiona Enter)", type="primary")
 
-    if st.button("➕ Agregar al carrito", key=f"{key_prefix}_btn_agregar_manual"):
+    if agregar:
         if cantidad <= 0:
             st.error("La cantidad debe ser mayor a cero.")
         elif cantidad > stock_disp:

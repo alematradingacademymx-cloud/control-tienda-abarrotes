@@ -27,8 +27,9 @@ PREFIJO = "venta"
 def _inyectar_atajos():
     """Mantiene el campo de 'Código de barras' enfocado automáticamente
     (para poder escanear sin darle clic primero) y activa los atajos
-    Alt+B (buscar producto), Alt+V (vaciar carrito), Alt+C (cobrar) y Enter
-    (confirmar la venta, cuando el panel de pago ya está abierto).
+    Ctrl+C o Alt+C (cobrar), Alt+B (buscar producto), Alt+V (vaciar
+    carrito) y Enter (confirmar la venta, cuando el panel de pago ya está
+    abierto).
 
     Se usa Alt+letra en vez de solo la letra porque el campo de código se
     queda enfocado casi todo el tiempo — una letra suelta se interpretaría
@@ -83,6 +84,14 @@ def _inyectar_atajos():
             window.parent.document.addEventListener('keydown', function(e) {
                 const activo = parentDoc.activeElement;
 
+                // Ctrl+C (o Cmd+C en Mac) cobra directo, sin necesidad de
+                // soltar el código de barras primero.
+                if ((e.ctrlKey || e.metaKey) && !e.altKey && e.key.toLowerCase() === 'c') {
+                    const boton = encontrarBoton('Cobrar');
+                    if (boton) { e.preventDefault(); boton.click(); }
+                    return;
+                }
+
                 if (e.altKey && !e.ctrlKey && !e.metaKey) {
                     const tecla = e.key.toLowerCase();
                     let boton = null;
@@ -120,16 +129,17 @@ def _render_confirmacion_venta(total: float):
     recibido = 0.0
     if metodo_pago == "Efectivo":
         recibido = st.number_input(
-            "¿Cuánto dinero te dio el cliente?",
+            "¿Cuánto dinero te dio el cliente? (opcional, solo para calcular el cambio)",
             min_value=0.0, step=10.0, format="%.2f", key=f"{PREFIJO}_recibido_efectivo",
         )
-        cambio = recibido - total
         if recibido == 0:
-            st.caption("Escribe el monto recibido para calcular el cambio.")
-        elif cambio < 0:
-            st.error(f"Faltan ${abs(cambio):,.2f} — lo recibido es menor al total (${total:,.2f}).")
+            st.caption("Puedes dejarlo en 0 y confirmar directo si no necesitas calcular el cambio.")
         else:
-            st.success(f"💰 Cambio a entregar: ${cambio:,.2f}")
+            cambio = recibido - total
+            if cambio < 0:
+                st.warning(f"El monto recibido (${recibido:,.2f}) es menor al total (${total:,.2f}). Aun así puedes confirmar la venta.")
+            else:
+                st.success(f"💰 Cambio a entregar: ${cambio:,.2f}")
 
     col_a, col_b = st.columns(2)
     confirmar = col_a.button("✅ Confirmar y registrar venta", type="primary", key=f"{PREFIJO}_btn_confirmar_final")
@@ -140,18 +150,19 @@ def _render_confirmacion_venta(total: float):
         st.rerun()
 
     if confirmar:
-        if metodo_pago == "Efectivo" and recibido < total:
-            st.error("El monto recibido debe cubrir el total antes de confirmar.")
-        else:
-            turno_venta = st.session_state.get(f"{PREFIJO}_turno_actual", "")
-            id_venta = carrito_utils.registrar_venta_carrito(CLAVE_CARRITO, metodo_pago, turno=turno_venta)
-            st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = False
-            st.session_state.pop(f"{PREFIJO}_recibido_efectivo", None)
-            mensaje = f"Venta {id_venta} registrada por ${total:,.2f} ({metodo_pago})."
-            if cambio is not None and cambio >= 0:
-                mensaje += f" Cambio: ${cambio:,.2f}."
-            st.toast(mensaje, icon="✅")
-            st.rerun()
+        # Ya no se exige que el monto recibido cubra el total: si el
+        # empleado no lo captura (o le queda corto), la venta se registra
+        # de todas formas — el monto recibido es solo para calcular el
+        # cambio, no un requisito para guardar.
+        turno_venta = st.session_state.get(f"{PREFIJO}_turno_actual", "")
+        id_venta = carrito_utils.registrar_venta_carrito(CLAVE_CARRITO, metodo_pago, turno=turno_venta)
+        st.session_state[f"{PREFIJO}_mostrar_confirmacion"] = False
+        st.session_state.pop(f"{PREFIJO}_recibido_efectivo", None)
+        mensaje = f"Venta {id_venta} registrada por ${total:,.2f} ({metodo_pago})."
+        if cambio is not None and cambio >= 0:
+            mensaje += f" Cambio: ${cambio:,.2f}."
+        st.toast(mensaje, icon="✅")
+        st.rerun()
 
 
 def _render_ticket(clave: str, key_prefix: str) -> float:
@@ -196,7 +207,7 @@ def _render_ticket(clave: str, key_prefix: str) -> float:
 
 def render():
     st.header("🧾 Ventas diarias")
-    st.caption("Atajos: Alt+B buscar producto · Alt+V vaciar carrito · Alt+C cobrar · Enter confirma el pago.")
+    st.caption("Atajos: Ctrl+C (o Alt+C) cobrar · Alt+B buscar producto · Alt+V vaciar carrito · Enter confirma el pago.")
     _inyectar_atajos()
 
     inventario = leer_hoja("Inventario")
